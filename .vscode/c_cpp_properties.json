@@ -4,17 +4,14 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Program Files/LLVM/",
-                "C:/msys64/mingw64/bin/"
+                "C:/SFML-2.6.0/include/**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
                 "_UNICODE"
             ],
-            "compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
+            "compilerPath": "C:\\msys64\\mingw64\\bin\\gcc.exe",
             "intelliSenseMode": "windows-gcc-x64"
         }
     ],
