@@ -4,9 +4,9 @@
 #include <queue>
 #include <ctime>
 
-const int mapWidth = 10;
-const int mapHeight = 10;
-const int agentCount = 3;
+const int mapWidth = 10;    // Ширина карты
+const int mapHeight = 10;   // Высота карты
+const int agentCount = 3;   // Кол-во агентов
 const int moveCost = 1;
 
 struct Node {
@@ -85,24 +85,45 @@ std::vector<std::pair<int, int>> findPath(int startX, int startY, int targetX, i
     return path;
 }
 
+
+
+
+
+
+
 int main() {
-    // Initialize SFML window
+    // Инициализация SFML окна
     sf::RenderWindow window(sf::VideoMode(800, 800), "Multi-Agent Pathfinding");
 
-    // Define your initial map, agent positions, and target positions here
-    std::vector<std::vector<int>> map(mapWidth, std::vector<int>(mapHeight, 0));
+    // Карта
+    std::vector<std::vector<int>> map = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    };
 
-    // Initialize SFML shapes and colors for visualization
-    sf::CircleShape agentShapes[agentCount];
-    sf::CircleShape targetShapes[agentCount];
-    sf::Color agentColors[agentCount] = {sf::Color::Red, sf::Color::Green, sf::Color::Blue};
+    // Инициализация SFML фигур и цветов агентовn
+    sf::CircleShape agentShapes[agentCount];    // Массив фигур начальных координат агентов
+    sf::CircleShape targetShapes[agentCount];   // Массив фигур конечных координат агентов
+    sf::Color agentColors[agentCount] = {sf::Color::Red, sf::Color::Green, sf::Color::Blue}; // Массив цветов агентов
 
     for (int i = 0; i < agentCount; ++i) {
-        agentShapes[i] = sf::CircleShape(20);
-        agentShapes[i].setFillColor(agentColors[i]);
+        // Начальные координаты
+        agentShapes[i] = sf::CircleShape(20);               // Круг радиусом 20
+        agentShapes[i].setFillColor(agentColors[i]);        // Цвет агента
 
-        targetShapes[i] = sf::CircleShape(20);
-        targetShapes[i].setFillColor(sf::Color::Yellow);
+        // Конечные координаты
+        targetShapes[i] = sf::CircleShape(20);              // Круг радиусом 20
+        targetShapes[i].setFillColor(sf::Color::Yellow);    // Цвет конечных координат
+        targetShapes[i].setOutlineThickness(2);             // Обводка толщиной 2
+        targetShapes[i].setOutlineColor(agentColors[i]);    // Цвет обводки
     }
 
     // Define your main loop for visualization and interaction here
@@ -133,8 +154,8 @@ int main() {
         // Draw the agents and their paths
         int startX[agentCount] = {2, 5, 8};
         int startY[agentCount] = {2, 5, 8};
-        int targetX[agentCount] = {7, 2, 5};
-        int targetY[agentCount] = {7, 4, 1};
+        int targetX[agentCount] = {3, 6, 9};
+        int targetY[agentCount] = {4, 6, 9};
 
         for (int i = 0; i < agentCount; ++i) {
             // Draw the path
