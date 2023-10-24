@@ -34,7 +34,7 @@ struct CompareNodes {
     }
 };
 
-// A* pathfinding algorithm
+// Алгоритм A*
 std::vector<std::pair<int, int>> findPath(int startX, int startY, int targetX, int targetY, std::vector<std::vector<int>>& map) {
     std::vector<std::pair<int, int>> path;
     std::priority_queue<Node*, std::vector<Node*>, CompareNodes> openSet;
@@ -109,24 +109,31 @@ int main() {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     };
 
-    // Инициализация SFML фигур и цветов агентовn
-    sf::CircleShape agentShapes[agentCount];    // Массив фигур начальных координат агентов
-    sf::CircleShape targetShapes[agentCount];   // Массив фигур конечных координат агентов
-    sf::Color agentColors[agentCount] = {sf::Color::Red, sf::Color::Green, sf::Color::Blue}; // Массив цветов агентов
+    // Инициализация SFML фигур и цветов агентов
+    sf::Color darkRed(255, 139, 139);   // Темно-красный
+    sf::Color darkGreen(139, 255, 139); // Темно-зеленый
+    sf::Color darkBlue(139, 139,255);   // Темно-синий
+    sf::RectangleShape agentShapes[agentCount];    // Массив фигур начальных координат агентов
+    sf::RectangleShape targetShapes[agentCount];   // Массив фигур конечных координат агентов
+    sf::Color agentColors[agentCount] = {sf::Color::Red, sf::Color::Green, sf::Color::Blue}; // Массив цветов начальных точке агентов
+    sf::Color targetColors[agentCount] = {sf::Color::Red, sf::Color::Green, sf::Color::Blue}; // Массив цветов конечных точекагентов
+    sf::Color pathColors[agentCount] = {darkRed, darkGreen, darkBlue}; // Массив цветов путей агентов
+
+
 
     for (int i = 0; i < agentCount; ++i) {
         // Начальные координаты
-        agentShapes[i] = sf::CircleShape(20);               // Круг радиусом 20
-        agentShapes[i].setFillColor(agentColors[i]);        // Цвет агента
+        agentShapes[i] = sf::RectangleShape(sf::Vector2f(40, 40));   // Круг радиусом 20
+        agentShapes[i].setFillColor(agentColors[i]);                // Цвет агента
 
         // Конечные координаты
-        targetShapes[i] = sf::CircleShape(20);              // Круг радиусом 20
-        targetShapes[i].setFillColor(sf::Color::Yellow);    // Цвет конечных координат
-        targetShapes[i].setOutlineThickness(2);             // Обводка толщиной 2
-        targetShapes[i].setOutlineColor(agentColors[i]);    // Цвет обводки
+        targetShapes[i] = sf::RectangleShape(sf::Vector2f(37, 37)); // Круг радиусом 20
+        targetShapes[i].setFillColor(sf::Color::Yellow);            // Цвет конечных координат
+        targetShapes[i].setOutlineThickness(2);                     // Обводка толщиной 2
+        targetShapes[i].setOutlineColor(agentColors[i]);            // Цвет обводки
     }
 
-    // Define your main loop for visualization and interaction here
+    // Цикл визуализации
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -137,7 +144,7 @@ int main() {
 
         window.clear();
 
-        // Draw your map
+        // Визуализация карты
         sf::RectangleShape tile(sf::Vector2f(40, 40));
         for (int i = 0; i < mapWidth; ++i) {
             for (int j = 0; j < mapHeight; ++j) {
@@ -151,27 +158,27 @@ int main() {
             }
         }
 
-        // Draw the agents and their paths
+        ////////////////////////////////////////////////////////////////////////////////////////// Начальные и конечные координаты
         int startX[agentCount] = {2, 5, 8};
         int startY[agentCount] = {2, 5, 8};
         int targetX[agentCount] = {3, 6, 9};
-        int targetY[agentCount] = {4, 6, 9};
+        int targetY[agentCount] = {6, 6, 9};
 
         for (int i = 0; i < agentCount; ++i) {
-            // Draw the path
+            // Визуализация пути
             auto path = findPath(startX[i], startY[i], targetX[i], targetY[i], map);
             for (auto& node : path) {
                 sf::RectangleShape pathTile(sf::Vector2f(40, 40));
-                pathTile.setFillColor(sf::Color::Cyan);
+                pathTile.setFillColor(pathColors[i]);
                 pathTile.setPosition(node.first * 40, node.second * 40);
                 window.draw(pathTile);
             }
 
-            // Draw the agent
+            // Визуализация начальных координат агентов
             agentShapes[i].setPosition(startX[i] * 40, startY[i] * 40);
             window.draw(agentShapes[i]);
 
-            // Draw the target
+            // Визуализация конечных координат агентов
             targetShapes[i].setPosition(targetX[i] * 40, targetY[i] * 40);
             window.draw(targetShapes[i]);
         }
