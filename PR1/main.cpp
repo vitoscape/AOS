@@ -65,52 +65,61 @@ public:
         return std::abs(x1 - x2) + std::abs(y1 - y2);
     }
 
-    static std::vector<std::pair<int, int>> findPath(int startX, int startY, int targetX, int targetY, const Map &map) {
-        std::vector<std::pair<int, int>> path;
-        std::priority_queue<Node *, std::vector<Node *>, CompareNodes> openSet;
-        int mapWidth = map.getWidth();
-        int mapHeight = map.getHeight();
+    static std::vector<std::vector<std::pair<int, int>>> findPaths(const std::vector<int>& start_X, const std::vector<int>& start_Y, const std::vector<int>& target_X, const std::vector<int>& target_Y, const Map& map, std::vector<std::vector<bool>>& occupied) {
+        std::vector<std::vector<std::pair<int, int>>> allPaths;
+        for (size_t i = 0; i < start_X.size(); ++i) {
+            std::vector<std::pair<int, int>> path;
+            std::priority_queue<Node*, std::vector<Node*>, CompareNodes> openSet;
+            int mapWidth = map.getWidth();
+            int mapHeight = map.getHeight();
 
-        std::vector<std::vector<bool>> closedSet(mapWidth, std::vector<bool>(mapHeight, false));
+            std::vector<std::vector<bool>> closedSet(mapWidth, std::vector<bool>(mapHeight, false));
 
-        Node *startNode = new Node(startX, startY, nullptr, 0, manhattanDistance(startX, startY, targetX, targetY));
-        openSet.push(startNode);
+            Node* startNode = new Node(start_X[i], start_Y[i], nullptr, 0, manhattanDistance(start_X[i], start_Y[i], target_X[i], target_Y[i]));
+            openSet.push(startNode);
 
-        while (!openSet.empty()) {
-            Node *currentNode = openSet.top();
-            openSet.pop();
+            while (!openSet.empty()) {
+                Node* currentNode = openSet.top();
+                openSet.pop();
 
-            if (currentNode->getX() == targetX && currentNode->getY() == targetY) {
-                while (currentNode != nullptr) {
-                    path.emplace_back(std::make_pair(currentNode->getX(), currentNode->getY()));
-                    currentNode = currentNode->getParent();
+                if (currentNode->getX() == target_X[i] && currentNode->getY() == target_Y[i]) {
+                    while (currentNode != nullptr) {
+                        path.emplace_back(std::make_pair(currentNode->getX(), currentNode->getY()));
+                        currentNode = currentNode->getParent();
+                    }
+                    break;
                 }
-                break;
+
+                closedSet[currentNode->getX()][currentNode->getY()] = true;
+
+                std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+                for (const auto& neighbor : neighbors) {
+                    int neighborX = currentNode->getX() + neighbor.first;
+                    int neighborY = currentNode->getY() + neighbor.second;
+
+                    if (neighborX >= 0 && neighborX < mapWidth && neighborY >= 0 && neighborY < mapHeight
+                        && map.getData()[neighborX][neighborY] == 0 && !closedSet[neighborX][neighborY] && !occupied[neighborX][neighborY]) {
+                        int gCost = currentNode->getGCost() + 1;
+                        int hCost = manhattanDistance(neighborX, neighborY, target_X[i], target_Y[i]);
+                        Node* neighborNode = new Node(neighborX, neighborY, currentNode, gCost, hCost);
+                        openSet.push(neighborNode);
+                    }
+                }
             }
 
-            closedSet[currentNode->getX()][currentNode->getY()] = true;
+            while (!openSet.empty()) {
+                delete openSet.top();
+                openSet.pop();
+            }
+            allPaths.push_back(path);
 
-            std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            for (const auto &neighbor : neighbors) {
-                int neighborX = currentNode->getX() + neighbor.first;
-                int neighborY = currentNode->getY() + neighbor.second;
-
-                if (neighborX >= 0 && neighborX < mapWidth && neighborY >= 0 && neighborY < mapHeight &&
-                    map.getData()[neighborX][neighborY] == 0 && !closedSet[neighborX][neighborY]) {
-                    int gCost = currentNode->getGCost() + 1;
-                    int hCost = manhattanDistance(neighborX, neighborY, targetX, targetY);
-                    Node *neighborNode = new Node(neighborX, neighborY, currentNode, gCost, hCost);
-                    openSet.push(neighborNode);
-                }
+            // Обновление массива occupied для занятых клеток пути
+            for (auto& node : path) {
+                occupied[node.first][node.second] = true;
             }
         }
 
-        while (!openSet.empty()) {
-            delete openSet.top();
-            openSet.pop();
-        }
-
-        return path;
+        return allPaths;
     }
 };
 
@@ -156,6 +165,8 @@ int main() {
         targetShapes[i].setOutlineColor(agentColors[i]);
     }
 
+    //std::vector<std::vector<bool>> occupied(map.getWidth(), std::vector<bool>(map.getHeight(), false));
+
     // Цикл визуализации
     while (window.isOpen()) {
         sf::Event event;
@@ -186,28 +197,36 @@ int main() {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////// Начальные и конечные координаты
-        int startX[agentCount] = {2, 5, 9};
-        int startY[agentCount] = {2, 5, 9};
-        int targetX[agentCount] = {3, 2, 6};
-        int targetY[agentCount] = {6, 8, 1};
+        // Визуализация путей агентов
+        std::vector<int> startX = {2, 5, 9};
+        std::vector<int> startY = {2, 5, 9};
+        std::vector<int> targetX = {3, 2, 6};
+        std::vector<int> targetY = {6, 8, 1};
 
-        // Визуализация начальных и конечных координат
-        for (int i = 0; i < agentCount; ++i) {
-            // Визуализация пути
-            auto path = AStar::findPath(startX[i], startY[i], targetX[i], targetY[i], map);
-            for (auto& node : path) {
-                sf::CircleShape pathTile(4); // Круг диаметром 4
-                pathTile.setFillColor(pathColors[i]); // Цвет пути
-                pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19); // Центрирование точки
+        std::vector<std::vector<bool>> occupied(map.getWidth(), std::vector<bool>(map.getHeight(), false));
+
+        auto allPaths = AStar::findPaths(startX, startY, targetX, targetY, map, occupied);
+
+        // Обновление массива occupied
+        for (auto &path : allPaths) {
+            for (auto &node : path) {
+                occupied[node.first][node.second] = true;
+            }
+        }
+
+        for (size_t i = 0; i < allPaths.size(); ++i) {
+            for (auto &node : allPaths[i]) {
+                sf::CircleShape pathTile(4);
+                pathTile.setFillColor(pathColors[i]);
+                pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19);
                 window.draw(pathTile);
             }
-
             // Визуализация начальных координат агентов
-            agentShapes[i].setPosition(startX[i] * 40 + 18, startY[i] * 40 + 18); // Центрирование точки
+            agentShapes[i].setPosition(startX[i] * 40 + 18, startY[i] * 40 + 18);
             window.draw(agentShapes[i]);
 
             // Визуализация конечных координат агентов
-            targetShapes[i].setPosition(targetX[i] * 40 + 18, targetY[i] * 40 + 18); // Центрирование точки
+            targetShapes[i].setPosition(targetX[i] * 40 + 18, targetY[i] * 40 + 18);
             window.draw(targetShapes[i]);
         }
 
