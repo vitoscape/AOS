@@ -10,6 +10,7 @@ const int agentCount = 3;   // Кол-во агентов
 const int moveCost = 1;     // Стоимость передвижения
 
 
+
 class Map {
 private:
     int mapWidth;
