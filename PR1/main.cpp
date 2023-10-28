@@ -172,8 +172,8 @@ int main() {
         sf::RectangleShape tile(sf::Vector2f(40, 40));
         sf::CircleShape dot(2);
         dot.setFillColor(gray);
-        for (int i = 0; i < mapWidth; ++i) {
-            for (int j = 0; j < mapHeight; ++j) {
+        for (int i = 0; i < map.getWidth(); ++i) {
+            for (int j = 0; j < map.getHeight(); ++j) {
                 if (map.getData()[i][j] == 1) {
                     tile.setFillColor(sf::Color::Black);
                 } else {
