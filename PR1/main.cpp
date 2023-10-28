@@ -2,99 +2,122 @@
 #include <vector>
 #include <iostream>
 #include <queue>
-#include <ctime>
+#include <cmath>
 
 const int mapWidth = 10;    // Ширина карты
 const int mapHeight = 10;   // Высота карты
 const int agentCount = 3;   // Кол-во агентов
 const int moveCost = 1;     // Стоимость передвижения
 
-struct Node {
-    int x, y;
-    Node* parent;
+
+class Map {
+private:
+    int mapWidth;
+    int mapHeight;
+    std::vector<std::vector<int>> data;
+
+public:
+    Map(int width, int height, std::vector<std::vector<int>> mapData) : mapWidth(width), mapHeight(height), data(mapData) {}
+
+    int getWidth() const { return mapWidth; }
+
+    int getHeight() const { return mapHeight; }
+
+    std::vector<std::vector<int>> getData() const { return data; }
+
+    bool isObstacle(int x, int y) const { return data[x][y] == 1; }
+};
+
+class Node {
+private:
+    int x;
+    int y;
+    Node *parent;
     int gCost;
     int hCost;
 
-    Node(int x, int y, Node* parent, int gCost, int hCost)
-        : x(x), y(y), parent(parent), gCost(gCost), hCost(hCost) {}
+public:
+    Node(int xPos, int yPos, Node *p, int g, int h) : x(xPos), y(yPos), parent(p), gCost(g), hCost(h) {}
 
-    int fCost() const {
-        return gCost + hCost;
-    }
+    int getX() const { return x; }
+
+    int getY() const { return y; }
+
+    Node *getParent() const { return parent; }
+
+    int getGCost() const { return gCost; }
+
+    int getHCost() const { return hCost; }
+
+    int getFCost() const { return gCost + hCost; }
 };
 
-// Функция нахождения манхэттенского расстояния между двумя точками
-int manhattanDistance(int x1, int y1, int x2, int y2) {
-    return abs(x1 - x2) + abs(y1 - y2);
-}
+class AStar {
+private:
+    struct CompareNodes {
+        bool operator()(const Node *lhs, const Node *rhs) const {
+            return lhs->getFCost() > rhs->getFCost();
+        }
+    };
 
-// Перегрузка оператора для возможности сравнения объектов структуры Node
-struct CompareNodes {
-    bool operator()(const Node* lhs, const Node* rhs) const {
-        return lhs->fCost() > rhs->fCost();
+public:
+    static int manhattanDistance(int x1, int y1, int x2, int y2) {
+        return std::abs(x1 - x2) + std::abs(y1 - y2);
+    }
+
+    static std::vector<std::pair<int, int>> findPath(int startX, int startY, int targetX, int targetY, const Map &map) {
+        std::vector<std::pair<int, int>> path;
+        std::priority_queue<Node *, std::vector<Node *>, CompareNodes> openSet;
+        int mapWidth = map.getWidth();
+        int mapHeight = map.getHeight();
+
+        std::vector<std::vector<bool>> closedSet(mapWidth, std::vector<bool>(mapHeight, false));
+
+        Node *startNode = new Node(startX, startY, nullptr, 0, manhattanDistance(startX, startY, targetX, targetY));
+        openSet.push(startNode);
+
+        while (!openSet.empty()) {
+            Node *currentNode = openSet.top();
+            openSet.pop();
+
+            if (currentNode->getX() == targetX && currentNode->getY() == targetY) {
+                while (currentNode != nullptr) {
+                    path.emplace_back(std::make_pair(currentNode->getX(), currentNode->getY()));
+                    currentNode = currentNode->getParent();
+                }
+                break;
+            }
+
+            closedSet[currentNode->getX()][currentNode->getY()] = true;
+
+            std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            for (const auto &neighbor : neighbors) {
+                int neighborX = currentNode->getX() + neighbor.first;
+                int neighborY = currentNode->getY() + neighbor.second;
+
+                if (neighborX >= 0 && neighborX < mapWidth && neighborY >= 0 && neighborY < mapHeight &&
+                    map.getData()[neighborX][neighborY] == 0 && !closedSet[neighborX][neighborY]) {
+                    int gCost = currentNode->getGCost() + 1;
+                    int hCost = manhattanDistance(neighborX, neighborY, targetX, targetY);
+                    Node *neighborNode = new Node(neighborX, neighborY, currentNode, gCost, hCost);
+                    openSet.push(neighborNode);
+                }
+            }
+        }
+
+        while (!openSet.empty()) {
+            delete openSet.top();
+            openSet.pop();
+        }
+
+        return path;
     }
 };
-
-// Алгоритм A*
-std::vector<std::pair<int, int>> findPath(int startX, int startY, int targetX, int targetY, std::vector<std::vector<int>>& map) {
-    std::vector<std::pair<int, int>> path;
-    std::priority_queue<Node*, std::vector<Node*>, CompareNodes> openSet;
-
-    std::vector<std::vector<bool>> closedSet(mapWidth, std::vector<bool>(mapHeight, false));
-
-    Node* startNode = new Node(startX, startY, nullptr, 0, manhattanDistance(startX, startY, targetX, targetY));
-    openSet.push(startNode);
-
-    while (!openSet.empty()) {
-        Node* currentNode = openSet.top();
-        openSet.pop();
-
-        if (currentNode->x == targetX && currentNode->y == targetY) {
-            // Нахождение цели, перестройка пути
-            while (currentNode != nullptr) {
-                path.push_back({currentNode->x, currentNode->y});
-                currentNode = currentNode->parent;
-            }
-            break;
-        }
-
-        closedSet[currentNode->x][currentNode->y] = true;
-
-        // Генерация соседних нод
-        std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-        for (const auto& neighbor : neighbors) {
-            int neighborX = currentNode->x + neighbor.first;
-            int neighborY = currentNode->y + neighbor.second;
-
-            // Проверка, подходит ли соседняя нода
-            if (neighborX >= 0 && neighborX < mapWidth && neighborY >= 0 && neighborY < mapHeight
-                && map[neighborX][neighborY] == 0 && !closedSet[neighborX][neighborY]) {
-                int gCost = currentNode->gCost + moveCost;
-                int hCost = manhattanDistance(neighborX, neighborY, targetX, targetY);
-                Node* neighborNode = new Node(neighborX, neighborY, currentNode, gCost, hCost);
-                openSet.push(neighborNode);
-            }
-        }
-    }
-
-    // Очистка нод
-    while (!openSet.empty()) {
-        delete openSet.top();
-        openSet.pop();
-    }
-
-    return path;
-}
-
-
-
 
 int main() {
-    // Инициализация SFML окна
     sf::RenderWindow window(sf::VideoMode(400, 400), "Multi-Agent Pathfinding");
 
-    ////////////////////////////////////////////////////////////////////////////////////////// Карта
-    std::vector<std::vector<int>> map = {
+    std::vector<std::vector<int>> mapData = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
@@ -104,8 +127,10 @@ int main() {
         {0, 0, 1, 1, 1, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
     };
+
+    Map map(10, 10, mapData);
 
     // Инициализация SFML фигур и цветов агентов
     sf::Color darkRed(255, 139, 139);   // Темно-красный
@@ -148,7 +173,7 @@ int main() {
         dot.setFillColor(gray);
         for (int i = 0; i < mapWidth; ++i) {
             for (int j = 0; j < mapHeight; ++j) {
-                if (map[i][j] == 1) {
+                if (map.getData()[i][j] == 1) {
                     tile.setFillColor(sf::Color::Black);
                 } else {
                     tile.setFillColor(sf::Color::White);
@@ -169,7 +194,7 @@ int main() {
         // Визуализация начальных и конечных координат
         for (int i = 0; i < agentCount; ++i) {
             // Визуализация пути
-            auto path = findPath(startX[i], startY[i], targetX[i], targetY[i], map);
+            auto path = AStar::findPath(startX[i], startY[i], targetX[i], targetY[i], map);
             for (auto& node : path) {
                 sf::CircleShape pathTile(4); // Круг диаметром 4
                 pathTile.setFillColor(pathColors[i]); // Цвет пути
