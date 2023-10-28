@@ -123,6 +123,66 @@ public:
     }
 };
 
+class PotentialFields {
+private:
+    std::vector<std::vector<int>> map;
+    std::vector<int> targetX;
+    std::vector<int> targetY;
+
+public:
+    PotentialFields(const std::vector<std::vector<int>>& _map, const std::vector<int>& _targetX, const std::vector<int>& _targetY) : map(_map), targetX(_targetX), targetY(_targetY) {}
+
+    std::vector<std::pair<int, int>> findPath(int startX, int startY) {
+        std::vector<std::pair<int, int>> path;
+        int currentX = startX;
+        int currentY = startY;
+
+        while (true) {
+            path.emplace_back(std::make_pair(currentX, currentY));
+
+            if (std::find(targetX.begin(), targetX.end(), currentX) != targetX.end() &&
+                std::find(targetY.begin(), targetY.end(), currentY) != targetY.end()) {
+                break;
+            }
+
+            std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            double minPotential = std::numeric_limits<double>::max();
+            int nextX = currentX;
+            int nextY = currentY;
+
+            for (const auto& neighbor : neighbors) {
+                int neighborX = currentX + neighbor.first;
+                int neighborY = currentY + neighbor.second;
+
+                if (neighborX >= 0 && neighborX < map.size() && neighborY >= 0 && neighborY < map[0].size() && map[neighborX][neighborY] == 0) {
+                    double neighborPotential = calculatePotential(neighborX, neighborY);
+                    if (neighborPotential < minPotential) {
+                        minPotential = neighborPotential;
+                        nextX = neighborX;
+                        nextY = neighborY;
+                    }
+                }
+            }
+
+            currentX = nextX;
+            currentY = nextY;
+        }
+
+        return path;
+    }
+
+private:
+    double calculatePotential(int x, int y) {
+        double potential = 0.0;
+        for (size_t i = 0; i < targetX.size(); ++i) {
+            double distance = std::sqrt((x - targetX[i]) * (x - targetX[i]) + (y - targetY[i]) * (y - targetY[i]));
+            potential += 100.0 / (distance + 1.0);
+        }
+        return potential;
+    }
+};
+
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(400, 400), "Multi-Agent Pathfinding");
 
@@ -204,6 +264,11 @@ int main() {
         std::vector<int> targetY = {6, 8, 1};
 
         std::vector<std::vector<bool>> occupied(map.getWidth(), std::vector<bool>(map.getHeight(), false));
+        
+        std::vector<PotentialFields> agents;
+        for (size_t i = 0; i < startX.size(); ++i) {
+            agents.emplace_back(map, std::vector<int>{targetX[i]}, std::vector<int>{targetY[i]});
+        }
 
         auto allPaths = AStar::findPaths(startX, startY, targetX, targetY, map, occupied);
 
@@ -229,6 +294,18 @@ int main() {
             targetShapes[i].setPosition(targetX[i] * 40 + 18, targetY[i] * 40 + 18);
             window.draw(targetShapes[i]);
         }
+
+        // Визуализация путей агентов с использованием метода потенциальных полей
+        for (size_t i = 0; i < agents.size(); ++i) {
+            auto potentialPath = agents[i].findPath(startX[i], startY[i]);
+
+            for (auto& node : potentialPath) {
+                sf::CircleShape pathTile(4);
+                pathTile.setFillColor(pathColors[i]);
+                pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19);
+                window.draw(pathTile);
+            }
+}
 
         window.display();
 
