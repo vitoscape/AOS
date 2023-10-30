@@ -124,64 +124,80 @@ public:
 };
 
 class PotentialFields {
-private:
-    std::vector<std::vector<int>> map;
-    std::vector<int> targetX;
-    std::vector<int> targetY;
-
 public:
-    PotentialFields(const std::vector<std::vector<int>>& _map, const std::vector<int>& _targetX, const std::vector<int>& _targetY) : map(_map), targetX(_targetX), targetY(_targetY) {}
+    static std::vector<std::vector<std::pair<int, int>>> findPaths(const std::vector<int>& start_X, const std::vector<int>& start_Y, const std::vector<int>& target_X, const std::vector<int>& target_Y, const Map& map, std::vector<std::vector<bool>>& occupied) {
+        std::vector<std::vector<std::pair<int, int>>> allPaths;
+        for (size_t i = 0; i < start_X.size(); ++i) {
+            std::vector<std::pair<int, int>> path;
+            int currentX = start_X[i];
+            int currentY = start_Y[i];
+            int targetX = target_X[i];
+            int targetY = target_Y[i];
 
-    std::vector<std::pair<int, int>> findPath(int startX, int startY) {
-        std::vector<std::pair<int, int>> path;
-        int currentX = startX;
-        int currentY = startY;
+            while (currentX != targetX || currentY != targetY) {
+                int bestX = currentX;
+                int bestY = currentY;
+                int bestPotential = calculateTotalPotential(currentX, currentY, start_X, start_Y, targetX, targetY);
 
-        while (true) {
-            path.emplace_back(std::make_pair(currentX, currentY));
+                // Перебираем соседние клетки и находим ту, в которой потенциал меньше
+                int neighbors[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+                for (const auto& neighbor : neighbors) {
+                    int newX = currentX + neighbor[0];
+                    int newY = currentY + neighbor[1];
 
-            if (std::find(targetX.begin(), targetX.end(), currentX) != targetX.end() &&
-                std::find(targetY.begin(), targetY.end(), currentY) != targetY.end()) {
-                break;
-            }
+                    if (newX >= 0 && newX < map.getWidth() && newY >= 0 && newY < map.getHeight() && map.getData()[newX][newY] == 0) {
+                        int potential = calculateTotalPotential(newX, newY, start_X, start_Y, targetX, targetY);
 
-            std::vector<std::pair<int, int>> neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-            double minPotential = std::numeric_limits<double>::max();
-            int nextX = currentX;
-            int nextY = currentY;
-
-            for (const auto& neighbor : neighbors) {
-                int neighborX = currentX + neighbor.first;
-                int neighborY = currentY + neighbor.second;
-
-                if (neighborX >= 0 && neighborX < map.size() && neighborY >= 0 && neighborY < map[0].size() && map[neighborX][neighborY] == 0) {
-                    double neighborPotential = calculatePotential(neighborX, neighborY);
-                    if (neighborPotential < minPotential) {
-                        minPotential = neighborPotential;
-                        nextX = neighborX;
-                        nextY = neighborY;
+                        if (potential < bestPotential) {
+                            bestPotential = potential;
+                            bestX = newX;
+                            bestY = newY;
+                        }
                     }
                 }
+
+                path.emplace_back(std::make_pair(bestX, bestY));
+                currentX = bestX;
+                currentY = bestY;
             }
 
-            currentX = nextX;
-            currentY = nextY;
+            allPaths.push_back(path);
         }
 
-        return path;
+        return allPaths;
     }
 
 private:
-    double calculatePotential(int x, int y) {
-        double potential = 0.0;
-        for (size_t i = 0; i < targetX.size(); ++i) {
-            double distance = std::sqrt((x - targetX[i]) * (x - targetX[i]) + (y - targetY[i]) * (y - targetY[i]));
-            potential += 100.0 / (distance + 1.0);
+    static int calculateAgentPotential(int x, int y, int agentX, int agentY) {
+        int distance = manhattanDistance(x, y, agentX, agentY);
+        return distance;
+    }
+
+    static int calculateGoalPotential(int x, int y, int goalX, int goalY) {
+        int distance = manhattanDistance(x, y, goalX, goalY);
+        return -distance;
+    }
+
+    static int calculateTotalPotential(int x, int y, const std::vector<int>& start_X, const std::vector<int>& start_Y, int targetX, int targetY) {
+        int totalPotential = 0;
+
+        for (size_t i = 0; i < start_X.size(); ++i) {
+            int agentPotential = calculateAgentPotential(x, y, start_X[i], start_Y[i]);
+            totalPotential += agentPotential;
         }
-        return potential;
+
+        int goalPotential = calculateGoalPotential(x, y, targetX, targetY);
+        totalPotential += goalPotential;
+
+        return totalPotential;
+    }
+
+    static int manhattanDistance(int x1, int y1, int x2, int y2) {
+        return std::abs(x1 - x2) + std::abs(y1 - y2);
     }
 };
 
+// "важно не столько то, чем пахнут собачьи локти, сколько производство индийских трусов"
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(400, 400), "Multi-Agent Pathfinding");
@@ -189,14 +205,14 @@ int main() {
     std::vector<std::vector<int>> mapData = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-        {0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 1, 1, 1, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-        {0, 0, 0, 0, 0, 0, 0, 0, 1, 0}
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     };
 
     Map map(10, 10, mapData);
@@ -233,6 +249,7 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close();
+                //break;
             }
         }
 
@@ -256,23 +273,23 @@ int main() {
             }
         }
 
-        ////////////////////////////////////////////////////////////////////////////////////////// Начальные и конечные координаты
+        ////////////////////////////////////////////////////////////////////////////////////// Начальные и конечные координаты
         // Визуализация путей агентов
-        std::vector<int> startX = {2, 5, 9};
-        std::vector<int> startY = {2, 5, 9};
-        std::vector<int> targetX = {3, 2, 6};
-        std::vector<int> targetY = {6, 8, 1};
+        std::vector<int> startX = {1, 5, 4};
+        std::vector<int> startY = {1, 5, 7};
+        std::vector<int> targetX = {1, 6, 0};
+        std::vector<int> targetY = {9, 6, 7};
 
         std::vector<std::vector<bool>> occupied(map.getWidth(), std::vector<bool>(map.getHeight(), false));
-        
-        std::vector<PotentialFields> agents;
-        for (size_t i = 0; i < startX.size(); ++i) {
-            agents.emplace_back(map, std::vector<int>{targetX[i]}, std::vector<int>{targetY[i]});
-        }
 
-        auto allPaths = AStar::findPaths(startX, startY, targetX, targetY, map, occupied);
+        // Алгоритм A*
+        // auto allPaths = AStar::findPaths(startX, startY, targetX, targetY, map, occupied);
+
+        // Алгоритм потенциальных полей
+        auto allPaths = PotentialFields::findPaths(startX, startY, targetX, targetY, map, occupied);
 
         // Обновление массива occupied
+
         for (auto &path : allPaths) {
             for (auto &node : path) {
                 occupied[node.first][node.second] = true;
@@ -286,6 +303,7 @@ int main() {
                 pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19);
                 window.draw(pathTile);
             }
+            
             // Визуализация начальных координат агентов
             agentShapes[i].setPosition(startX[i] * 40 + 18, startY[i] * 40 + 18);
             window.draw(agentShapes[i]);
@@ -295,17 +313,23 @@ int main() {
             window.draw(targetShapes[i]);
         }
 
-        // Визуализация путей агентов с использованием метода потенциальных полей
-        for (size_t i = 0; i < agents.size(); ++i) {
-            auto potentialPath = agents[i].findPath(startX[i], startY[i]);
+        // Визуализация путей и агентов для потенциальных полей
+        // for (size_t i = 0; i < allPaths.size(); ++i) {
+        //     for (const auto& node : allPaths[i]) {
+        //         sf::CircleShape pathTile(4);
+        //         pathTile.setFillColor(pathColors[i]);
+        //         pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19);
+        //         window.draw(pathTile);
+        //     }
 
-            for (auto& node : potentialPath) {
-                sf::CircleShape pathTile(4);
-                pathTile.setFillColor(pathColors[i]);
-                pathTile.setPosition(node.first * 40 + 19, node.second * 40 + 19);
-                window.draw(pathTile);
-            }
-}
+        //     // Визуализация начальных координат агентов для потенциальных полей
+        //     agentShapes[i].setPosition(startX[i] * 40 + 18, startY[i] * 40 + 18);
+        //     window.draw(agentShapes[i]);
+
+        //     // Визуализация конечных координат агентов для потенциальных полей
+        //     targetShapes[i].setPosition(targetX[i] * 40 + 18, targetY[i] * 40 + 18);
+        //     window.draw(targetShapes[i]);
+        // }
 
         window.display();
 
